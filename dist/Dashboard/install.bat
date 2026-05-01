@@ -7,7 +7,6 @@ set "APP_DIR=%APP_DIR:~0,-1%"
 
 set "EXE=%APP_DIR%\Dashboard.exe"
 set "ICO=%APP_DIR%\DrDan.ico"
-set "SHORTCUT=%USERPROFILE%\Desktop\Advanced Antivirus Suite.lnk"
 
 :: ── Sanity check ─────────────────────────────────────────────────────────────
 if not exist "%EXE%" (
@@ -18,25 +17,20 @@ if not exist "%EXE%" (
 )
 
 :: ── Create shortcut via PowerShell ───────────────────────────────────────────
+:: [Environment]::GetFolderPath resolves the real Desktop even when
+:: OneDrive redirects it away from %USERPROFILE%\Desktop
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$desktop  = [Environment]::GetFolderPath('Desktop');" ^
+    "$shortcut = Join-Path $desktop 'Advanced Antivirus Suite.lnk';" ^
     "$ws = New-Object -ComObject WScript.Shell;" ^
-    "$s  = $ws.CreateShortcut('%SHORTCUT%');" ^
-    "$s.TargetPath      = '%EXE%';" ^
+    "$s  = $ws.CreateShortcut($shortcut);" ^
+    "$s.TargetPath       = '%EXE%';" ^
     "$s.WorkingDirectory = '%APP_DIR%';" ^
-    "$s.IconLocation    = '%ICO%,0';" ^
-    "$s.Description     = 'Advanced Antivirus Suite';" ^
-    "$s.Save()"
+    "$s.IconLocation     = '%ICO%,0';" ^
+    "$s.Description      = 'Advanced Antivirus Suite';" ^
+    "$s.Save();" ^
+    "Write-Host ('Shortcut created: ' + $shortcut)"
 
-if exist "%SHORTCUT%" (
-    echo.
-    echo  Desktop shortcut created successfully.
-    echo  You can now launch the app from your Desktop.
-    echo.
-) else (
-    echo.
-    echo  [WARNING] Shortcut may not have been created. Check PowerShell permissions.
-    echo.
-)
-
+echo.
 pause
 endlocal
