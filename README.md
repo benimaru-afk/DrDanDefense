@@ -16,28 +16,28 @@ Extract the ZIP to wherever you want the app to live permanently (e.g. `C:\Progr
 
 After extracting, you should see the following top-level folder structure:
 
-![Unzipped project folder showing .git, build, demo-pictures, dist, network-data, LICENSE, and README.md](demo-pictures/1777863775063_unzipped_landing.png)
+![Unzipped project folder showing .git, build, demo-pictures, dist, network-data, LICENSE, and README.md](demo-pictures/unzipped landing.png)
 
 Open the **`dist`** folder — this is where the application files live:
 
-![Contents of the dist folder: _internal folder, Dashboard.exe, DrDan.ico, install.bat, malware_data.txt, network_data.txt, README.md](demo-pictures/1777863775062_inside_dist.png)
+![Contents of the dist folder: _internal folder, Dashboard.exe, DrDan.ico, install.bat, malware_data.txt, network_data.txt, README.md](demo-pictures/inside dist.png)
 
 ### 3 — Desktop shortcut (optional)
 
 Inside the `dist` folder, double-click **`install.bat`** (highlighted below):
 
-![File explorer with install.bat selected](demo-pictures/1777863775065_install_bat_file.png)
+![File explorer with install.bat selected](demo-pictures/install bat file.png)
 
 > If Windows asks "Do you want to allow this app to make changes?", click **Yes**.  
 > If your antivirus flags the `.bat`, you can safely allow it — it only creates a shortcut.
 
 A command prompt will confirm the shortcut was created and then close:
 
-![Command prompt showing "Shortcut created: C:\Users\benma\OneDrive\Desktop\Advanced Antivirus Suite.lnk"](demo-pictures/1777863775067_install_bat_success.png)
+![Command prompt showing "Shortcut created: C:\Users\benma\OneDrive\Desktop\Advanced Antivirus Suite.lnk"](demo-pictures/install bat success.png)
 
 You will now have an **Advanced Antivirus Suite** shortcut on your Desktop:
 
-![Desktop shortcut icon for Advanced Antivirus Suite](demo-pictures/1777863775068_desktop_icon.png)
+![Desktop shortcut icon for Advanced Antivirus Suite](demo-pictures/desktop icon.png)
 
 ### 4 — Launch
 
@@ -52,7 +52,7 @@ No Python installation is required.
 
 When the app launches you will land on the **Dashboard**, which shows a real-time security summary:
 
-![Main dashboard showing Protection Status, Malicious Packets gauge, Malicious Files gauge, and Recent Security Events panel](demo-pictures/1777863775069_main_dashboard.png)
+![Main dashboard showing Protection Status, Malicious Packets gauge, Malicious Files gauge, and Recent Security Events panel](demo-pictures/main dashboard.png)
 
 The top row shows:
 - **Last Scan Performed** — timestamp of the most recent scan
@@ -65,7 +65,7 @@ The **Protection Status** panel lists real-time monitoring state, firewall integ
 
 Navigate to **Network** to run traffic scans:
 
-![Network page with Quick Scan and Deep Scan cards, each offering Traffic Scan and Live Scan buttons, plus a Last Scan Results panel](demo-pictures/1777863775070_network_page.png)
+![Network page with Quick Scan and Deep Scan cards, each offering Traffic Scan and Live Scan buttons, plus a Last Scan Results panel](demo-pictures/network page.png)
 
 | Scan Mode | How it works |
 |-----------|-------------|
@@ -78,7 +78,7 @@ Each mode offers **Traffic Scan** (upload a `.csv`) and **Live Scan** (capture 3
 
 Navigate to **Malware** to scan files and folders:
 
-![Malware page with Signature Scan and Full Scan (YARA) cards, plus Last Scan Results panel](demo-pictures/1777863775072_malware_page.png)
+![Malware page with Signature Scan and Full Scan (YARA) cards, plus Last Scan Results panel](demo-pictures/malware page.png)
 
 | Scan Mode | How it works |
 |-----------|-------------|
@@ -91,7 +91,7 @@ The **Entropy analysis** toggle (top-right) enables detection of high-entropy (p
 
 Navigate to **My Account** to set up email attack notifications:
 
-![My Account page with email input field and Send Verification Code button](demo-pictures/1777863775073_account_page.png)
+![My Account page with email input field and Send Verification Code button](demo-pictures/account page.png)
 
 Enter your email address and click **Send Verification Code**. Once verified, you can toggle attack alert emails on or off.
 
