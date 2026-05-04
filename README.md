@@ -14,18 +14,86 @@ Click the green **Code** button on this GitHub page and choose **Download ZIP**.
 
 Extract the ZIP to wherever you want the app to live permanently (e.g. `C:\Program Files\AdvancedAntivirusSuite\` or your Desktop). Do **not** move individual files out of the folder after extraction — everything must stay together.
 
+After extracting, you should see the following top-level folder structure:
+
+![Unzipped project folder showing .git, build, demo-pictures, dist, network-data, LICENSE, and README.md](demo-pictures/unzipped_landing.png)
+
+Open the **`dist`** folder — this is where the application files live:
+
+![Contents of the dist folder: _internal folder, Dashboard.exe, DrDan.ico, install.bat, malware_data.txt, network_data.txt, README.md](demo-pictures/inside_dist.png)
+
 ### 3 — Desktop shortcut (optional)
 
-Open the extracted `Dashboard` folder and double-click **`install.bat`**.  
-A shortcut called **Advanced Antivirus Suite** will appear on your Desktop.
+Inside the `dist` folder, double-click **`install.bat`** (highlighted below):
+
+![File explorer with install.bat selected](demo-pictures/install_bat_file.png)
 
 > If Windows asks "Do you want to allow this app to make changes?", click **Yes**.  
 > If your antivirus flags the `.bat`, you can safely allow it — it only creates a shortcut.
+
+A command prompt will confirm the shortcut was created and then close:
+
+![Command prompt showing "Shortcut created: C:\Users\benma\OneDrive\Desktop\Advanced Antivirus Suite.lnk"](demo-pictures/install_bat_success.png)
+
+You will now have an **Advanced Antivirus Suite** shortcut on your Desktop:
+
+![Desktop shortcut icon for Advanced Antivirus Suite](demo-pictures/desktop_icon.png)
 
 ### 4 — Launch
 
 Run **`Dashboard.exe`** (or use the Desktop shortcut).  
 No Python installation is required.
+
+---
+
+## Application Overview
+
+### Dashboard
+
+When the app launches you will land on the **Dashboard**, which shows a real-time security summary:
+
+![Main dashboard showing Protection Status, Malicious Packets gauge, Malicious Files gauge, and Recent Security Events panel](demo-pictures/main_dashboard.png)
+
+The top row shows:
+- **Last Scan Performed** — timestamp of the most recent scan
+- **Malicious Packets** — percentage of flagged network traffic (green = safe)
+- **Malicious Files** — count of detected malicious files
+
+The **Protection Status** panel lists real-time monitoring state, firewall integration, threat signature update time, and scan history.
+
+### Network Page
+
+Navigate to **Network** to run traffic scans:
+
+![Network page with Quick Scan and Deep Scan cards, each offering Traffic Scan and Live Scan buttons, plus a Last Scan Results panel](demo-pictures/network_page.png)
+
+| Scan Mode | How it works |
+|-----------|-------------|
+| **Quick Scan** | Random Forest classifier — fast, great for known attack patterns |
+| **Deep Scan** | Random Forest + KMeans ensemble — slower, catches novel/anomalous traffic |
+
+Each mode offers **Traffic Scan** (upload a `.csv`) and **Live Scan** (capture 30 seconds of live traffic).
+
+### Malware Page
+
+Navigate to **Malware** to scan files and folders:
+
+![Malware page with Signature Scan and Full Scan (YARA) cards, plus Last Scan Results panel](demo-pictures/malware_page.png)
+
+| Scan Mode | How it works |
+|-----------|-------------|
+| **Signature Scan** | SHA-256 hash check against the MalwareBazaar threat feed |
+| **Full Scan (YARA)** | Hash check + compiled YARA rules to detect polymorphic/obfuscated malware |
+
+The **Entropy analysis** toggle (top-right) enables detection of high-entropy (packed/encrypted) files.
+
+### My Account
+
+Navigate to **My Account** to set up email attack notifications:
+
+![My Account page with email input field and Send Verification Code button](demo-pictures/account_page.png)
+
+Enter your email address and click **Send Verification Code**. Once verified, you can toggle attack alert emails on or off.
 
 ---
 
@@ -72,9 +140,9 @@ Once logged in you can toggle attack alert emails on or off from the account pag
 
 | Colour | Meaning |
 |--------|---------|
-| Green  | No threats detected |
-| Yellow | Suspicious activity (< 5 % of traffic flagged) |
-| Red    | Threats detected (≥ 5 % of traffic flagged) |
+| 🟢 Green  | No threats detected |
+| 🟡 Yellow | Suspicious activity (< 5 % of traffic flagged) |
+| 🔴 Red    | Threats detected (≥ 5 % of traffic flagged) |
 
 ---
 

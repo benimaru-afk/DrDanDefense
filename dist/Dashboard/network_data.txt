@@ -1,0 +1,11 @@
+{
+  "last_scan": null,
+  "last_scan_type": null,
+  "network_attacks_detected": false,
+  "network_threat_level": "none",
+  "real_time_monitoring": true,
+  "firewall_integration": true,
+  "threat_signatures_updated_at": "2026-05-03T20:44:19",
+  "last_scan_summary": {},
+  "events": []
+}
