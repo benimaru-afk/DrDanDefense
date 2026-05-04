@@ -17,11 +17,14 @@ import tkinter as tk
 from tkinter import ttk
 
 from pages.security_data import (
-    load_security_data,
+    load_network_data,
     record_ml_scan_result,
     format_timestamp,
     get_network_threat_level,
 )
+
+from auth import get_logged_in_user, notifications_enabled
+from email_notifier import send_attack_email
 
 # Root of the project — writable persistent dir when frozen (next to exe),
 # or two levels up from this file in normal dev mode.
@@ -141,8 +144,48 @@ class NetworkPage(tk.Frame):
         self.colors = colors
         self._poll_job = None
 
+        # ── Outer scrollable wrapper so content never clips vertically ────
+        outer_canvas = tk.Canvas(self, bg=colors["bg_dark"], highlightthickness=0)
+        outer_scrollbar = tk.Scrollbar(self, orient="vertical", command=outer_canvas.yview)
+        self._scroll_frame = tk.Frame(outer_canvas, bg=colors["bg_dark"])
+
+        self._scroll_frame.bind(
+            "<Configure>",
+            lambda e: outer_canvas.configure(
+                scrollregion=outer_canvas.bbox("all")
+            ),
+        )
+
+        self._scroll_win = outer_canvas.create_window(
+            (0, 0), window=self._scroll_frame, anchor="nw"
+        )
+        outer_canvas.configure(yscrollcommand=outer_scrollbar.set)
+
+        # Keep scroll_frame width in sync with canvas width
+        outer_canvas.bind(
+            "<Configure>",
+            lambda e: outer_canvas.itemconfig(self._scroll_win, width=e.width),
+        )
+
+        # Mousewheel on the outer canvas and scroll frame
+        def _outer_scroll(event):
+            outer_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        outer_canvas.bind("<MouseWheel>", _outer_scroll)
+        self._scroll_frame.bind("<MouseWheel>", _outer_scroll)
+
+        outer_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        outer_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # ── All page content lives in self._scroll_frame ──────────────────
+        self._build_content()
+
+    def _build_content(self):
+        """Build all page widgets inside the scrollable frame."""
+        parent = self._scroll_frame
+
         # ── Header ────────────────────────────────────────────────────────
-        header = tk.Frame(self, bg=self.colors["bg_dark"], height=80)
+        header = tk.Frame(parent, bg=self.colors["bg_dark"], height=80)
         header.pack(fill=tk.X, padx=30, pady=(20, 10))
         header.pack_propagate(False)
 
@@ -155,7 +198,7 @@ class NetworkPage(tk.Frame):
         ).pack(side=tk.LEFT, anchor="w")
 
         tk.Label(
-            self,
+            parent,
             text="Choose a scan mode for network threat detection.",
             font=("Segoe UI", 11),
             bg=self.colors["bg_dark"],
@@ -164,7 +207,7 @@ class NetworkPage(tk.Frame):
         ).pack(fill=tk.X, padx=30, pady=(0, 20))
 
         # ── Scan option cards ──────────────────────────────────────────────
-        cards_frame = tk.Frame(self, bg=self.colors["bg_dark"])
+        cards_frame = tk.Frame(parent, bg=self.colors["bg_dark"])
         cards_frame.pack(fill=tk.X, padx=30, pady=(0, 20))
 
         self.create_option_card(
@@ -198,7 +241,7 @@ class NetworkPage(tk.Frame):
         )
 
         # ── Status / results panel ─────────────────────────────────────────
-        self._build_results_panel()
+        self._build_results_panel(parent)
         self._refresh_results_panel()
 
     # ──────────────────────────────────────────────────────────────────────
@@ -241,7 +284,8 @@ class NetworkPage(tk.Frame):
             anchor="w",
         ).pack(fill=tk.X, pady=(0, 10))
 
-        tk.Label(
+        # Description label with dynamic wraplength
+        desc_label = tk.Label(
             content,
             text=description,
             font=("Segoe UI", 10),
@@ -250,7 +294,14 @@ class NetworkPage(tk.Frame):
             justify="left",
             wraplength=420,
             anchor="w",
-        ).pack(fill=tk.X, pady=(0, 22))
+        )
+        desc_label.pack(fill=tk.X, pady=(0, 22))
+
+        # Update wraplength whenever the card resizes
+        desc_label.bind(
+            "<Configure>",
+            lambda e, lbl=desc_label: lbl.configure(wraplength=max(100, e.width - 10)),
+        )
 
         # Two-button row: Traffic Scan | Live Scan
         btn_row = tk.Frame(content, bg=self.colors["bg_medium"])
@@ -299,9 +350,9 @@ class NetworkPage(tk.Frame):
     # Results panel
     # ──────────────────────────────────────────────────────────────────────
 
-    def _build_results_panel(self):
+    def _build_results_panel(self, parent):
         panel = tk.Frame(
-            self,
+            parent,
             bg=self.colors["bg_medium"],
             highlightbackground=self.colors["bg_light"],
             highlightthickness=1,
@@ -368,12 +419,12 @@ class NetworkPage(tk.Frame):
             darkcolor=self.colors["orange_secondary"],
         )
 
+        # No fixed length= — fill=tk.X handles width dynamically
         self._progress_bar = ttk.Progressbar(
             self._progress_frame,
             style="Orange.Horizontal.TProgressbar",
             orient="horizontal",
             mode="indeterminate",
-            length=400,
         )
         self._progress_bar.pack(fill=tk.X, pady=(0, 4))
 
@@ -423,6 +474,9 @@ class NetworkPage(tk.Frame):
             val.pack(anchor="w", pady=(4, 0))
             self._stat_labels[key] = val
 
+        # Row weight so stat cells can grow vertically too
+        stats_frame.grid_rowconfigure(0, weight=1)
+
         # Recent events — scrollable
         tk.Label(
             inner,
@@ -466,9 +520,10 @@ class NetworkPage(tk.Frame):
         self._events_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         events_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Mousewheel
+        # Mousewheel — forward to events canvas
         def _scroll(event):
             self._events_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
         self._events_canvas.bind("<MouseWheel>", _scroll)
         self._events_frame.bind("<MouseWheel>", _scroll)
 
@@ -784,6 +839,36 @@ class NetworkPage(tk.Frame):
         except tk.TclError:
             pass
         self._refresh_results_panel()
+        self._maybe_send_network_alert()
+
+    def _maybe_send_network_alert(self):
+        """Send an email alert if notifications are on and threats were detected."""
+        try:
+            email = get_logged_in_user()
+            if not email or not notifications_enabled():
+                return
+            data         = load_network_data()
+            threat_level = get_network_threat_level(data)
+            if threat_level not in ("attack", "suspicious"):
+                return
+            summary = data.get("last_scan_summary", {})
+            scan_type = data.get("last_scan_type", "Network Scan")
+            pct       = float(summary.get("attack_percentage", 0) or 0)
+            n         = int(summary.get("attacks_detected", 0) or 0)
+            total     = summary.get("total_rows", "?")
+            level_str = "ATTACK" if threat_level == "attack" else "SUSPICIOUS TRAFFIC"
+            body = (
+                f"Threat level : {level_str}\n"
+                f"Scan type    : {scan_type}\n"
+                f"Rows analysed: {total}\n"
+                f"Threats found: {n}\n"
+                f"Attack %     : {pct:.1f}%"
+            )
+            threading.Thread(
+                target=send_attack_email, args=(email, body), daemon=True
+            ).start()
+        except Exception:
+            pass
 
     def _handle_scan_error(self, stderr: str):
         self._set_scanning_state(False, "")
@@ -797,7 +882,7 @@ class NetworkPage(tk.Frame):
     # ──────────────────────────────────────────────────────────────────────
 
     def _refresh_results_panel(self):
-        data    = load_security_data()
+        data         = load_network_data()
         summary      = data.get("last_scan_summary", {})
         threat_level = get_network_threat_level(data)
 
@@ -908,7 +993,7 @@ class NetworkPage(tk.Frame):
                     fg=self.colors["text_gray"],
                 ).pack(side=tk.RIGHT)
 
-            # Propagate mousewheel to canvas
+            # Propagate mousewheel to events canvas
             row.bind("<MouseWheel>", lambda e: self._events_canvas.yview_scroll(
                 int(-1 * (e.delta / 120)), "units"
             ))

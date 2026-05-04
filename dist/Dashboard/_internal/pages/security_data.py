@@ -1,6 +1,11 @@
 """
 Security dashboard data persistence helpers.
-Stores runtime security status in data.txt at the project root.
+
+Data is stored in two separate files at the project root:
+  - network_data.txt  — network scan results & events
+  - malware_data.txt  — malware scan results & events
+
+The dashboard page reads from both to show a combined view.
 """
 
 from __future__ import annotations
@@ -18,7 +23,11 @@ def _app_dir() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-DATA_FILE = _app_dir() / "data.txt"
+NETWORK_DATA_FILE = _app_dir() / "network_data.txt"
+MALWARE_DATA_FILE = _app_dir() / "malware_data.txt"
+
+# Keep a legacy alias so any code that still imports DATA_FILE doesn't crash
+DATA_FILE = NETWORK_DATA_FILE
 
 
 def _now_iso() -> str:
@@ -29,55 +38,63 @@ SUSPICIOUS_THRESHOLD = 5.0   # attack% below this → "suspicious", not "attack"
 
 
 def get_network_threat_level(data: Dict[str, Any]) -> str:
-    """Return 'none' | 'suspicious' | 'attack', inferring from raw fields
-    when network_threat_level hasn't been written yet (old data.txt)."""
+    """Return 'none' | 'suspicious' | 'attack'."""
     level = data.get("network_threat_level", "none")
     if level in ("suspicious", "attack"):
         return level
-    # Backward-compat: old scans only set network_attacks_detected
     if data.get("network_attacks_detected", False):
         pct = float((data.get("last_scan_summary") or {}).get("attack_percentage", 0) or 0)
         return "suspicious" if pct < SUSPICIOUS_THRESHOLD else "attack"
     return "none"
 
-def _default_data() -> Dict[str, Any]:
+
+# ── Default schemas ────────────────────────────────────────────────────────────
+
+def _default_network_data() -> Dict[str, Any]:
     return {
         "last_scan": None,
         "last_scan_type": None,
-        "malware_detected": False,
         "network_attacks_detected": False,
-        "network_threat_level": "none",   # "none" | "suspicious" | "attack"
+        "network_threat_level": "none",
         "real_time_monitoring": True,
         "firewall_integration": True,
         "threat_signatures_updated_at": _now_iso(),
-        "quarantined_items": 0,
+        "last_scan_summary": {},
         "events": [],
     }
 
 
-def ensure_data_file() -> None:
-    if DATA_FILE.exists():
-        return
+def _default_malware_data() -> Dict[str, Any]:
+    return {
+        "last_scan": None,
+        "last_scan_type": None,
+        "malware_detected": False,
+        "quarantined_items": 0,
+        "last_scan_summary": {},
+        "events": [],
+    }
 
-    default_data = _default_data()
-    DATA_FILE.write_text(json.dumps(default_data, indent=2), encoding="utf-8")
+
+# ── Generic file helpers ───────────────────────────────────────────────────────
+
+def _ensure_file(path: Path, default_fn) -> None:
+    if not path.exists():
+        path.write_text(json.dumps(default_fn(), indent=2), encoding="utf-8")
 
 
-def load_security_data() -> Dict[str, Any]:
-    ensure_data_file()
-
+def _load_file(path: Path, default_fn) -> Dict[str, Any]:
+    _ensure_file(path, default_fn)
     try:
-        data = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        data = _default_data()
-        save_security_data(data)
+        data = default_fn()
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         return data
 
-    # Keep schema stable if keys are missing.
-    defaults = _default_data()
-    for key, default_value in defaults.items():
+    defaults = default_fn()
+    for key, val in defaults.items():
         if key not in data:
-            data[key] = default_value
+            data[key] = val
 
     if not isinstance(data.get("events"), list):
         data["events"] = []
@@ -85,72 +102,71 @@ def load_security_data() -> Dict[str, Any]:
     return data
 
 
-def save_security_data(data: Dict[str, Any]) -> None:
-    DATA_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+def _save_file(path: Path, data: Dict[str, Any]) -> None:
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
+
+# ── Public loaders / savers ───────────────────────────────────────────────────
+
+def load_network_data() -> Dict[str, Any]:
+    return _load_file(NETWORK_DATA_FILE, _default_network_data)
+
+
+def save_network_data(data: Dict[str, Any]) -> None:
+    _save_file(NETWORK_DATA_FILE, data)
+
+
+def load_malware_data() -> Dict[str, Any]:
+    return _load_file(MALWARE_DATA_FILE, _default_malware_data)
+
+
+def save_malware_data(data: Dict[str, Any]) -> None:
+    _save_file(MALWARE_DATA_FILE, data)
+
+
+# Legacy shim — existing code that calls load_security_data() / save_security_data()
+# will get the network data store (the only caller was network_page).
+def load_security_data() -> Dict[str, Any]:
+    return load_network_data()
+
+
+def save_security_data(data: Dict[str, Any]) -> None:
+    save_network_data(data)
+
+
+# ── Formatting helpers ────────────────────────────────────────────────────────
 
 def format_timestamp(value: Any) -> str:
     if not value:
         return "N/A"
-
     if isinstance(value, datetime):
         return value.strftime("%b %d, %Y %I:%M %p")
-
     if isinstance(value, str):
         try:
             parsed = datetime.fromisoformat(value)
             return parsed.strftime("%b %d, %Y %I:%M %p")
         except ValueError:
             return "N/A"
-
     return "N/A"
 
 
 def next_scheduled_scan(last_scan_value: Any) -> str:
     if not last_scan_value or not isinstance(last_scan_value, str):
         return "N/A"
-
     try:
         next_time = datetime.fromisoformat(last_scan_value) + timedelta(days=1)
     except ValueError:
         return "N/A"
-
     return next_time.strftime("%b %d, %Y %I:%M %p")
 
 
 def _append_event(data: Dict[str, Any], title: str, detail: str) -> None:
     events: List[Dict[str, str]] = data.get("events", [])
-    events.insert(
-        0,
-        {
-            "title": title,
-            "detail": detail,
-            "timestamp": _now_iso(),
-        },
-    )
-
-    # Keep only the newest 20 entries.
+    events.insert(0, {"title": title, "detail": detail, "timestamp": _now_iso()})
     data["events"] = events[:20]
 
 
-def record_scan(scan_type: str, source: str) -> None:
-    data = load_security_data()
-    now = _now_iso()
-
-    data["last_scan"] = now
-    data["last_scan_type"] = scan_type
-    _append_event(data, f"{scan_type} completed", f"Triggered from {source}")
-
-    save_security_data(data)
-
-
-def record_model_run(model_name: str, source: str) -> None:
-    data = load_security_data()
-    _append_event(data, f"{model_name} executed", f"Triggered from {source}")
-    save_security_data(data)
-
-
-# ── NEW: ML scan integration ──────────────────────────────────────────────────
+# ── Network scan persistence ──────────────────────────────────────────────────
 
 def record_ml_scan_result(
     scan_type: str,
@@ -158,17 +174,8 @@ def record_ml_scan_result(
     ml_events: List[Dict[str, Any]],
     summary: Dict[str, Any],
 ) -> None:
-    """
-    Called by ml_classifier.py (and network_page.py) after an ML scan finishes.
-
-    Parameters
-    ----------
-    scan_type       : "Quick Scan" or "Deep Scan"
-    attacks_detected: True if any attack-class rows were found
-    ml_events       : list of per-row attack dicts from the classifier
-    summary         : aggregate stats dict from run_scan()
-    """
-    data = load_security_data()
+    """Called by ml_classifier.py after an ML scan finishes."""
+    data = load_network_data()
     now  = _now_iso()
 
     pct = float(summary.get("attack_percentage", 0) or 0)
@@ -179,13 +186,12 @@ def record_ml_scan_result(
     else:
         threat_level = "attack"
 
-    data["last_scan"]                 = now
-    data["last_scan_type"]            = scan_type
-    data["network_attacks_detected"]  = threat_level == "attack"
-    data["network_threat_level"]      = threat_level
-    data["last_scan_summary"]         = summary
+    data["last_scan"]               = now
+    data["last_scan_type"]          = scan_type
+    data["network_attacks_detected"] = threat_level == "attack"
+    data["network_threat_level"]    = threat_level
+    data["last_scan_summary"]       = summary
 
-    # Build human-readable events for the GUI event feed
     n = summary.get("attacks_detected", len(ml_events))
     if threat_level == "attack":
         _append_event(
@@ -193,12 +199,10 @@ def record_ml_scan_result(
             f"{scan_type} — {n} threat(s) detected",
             f"{pct:.1f}% of {summary.get('total_rows', '?')} rows flagged as malicious",
         )
-        high = [e for e in ml_events if e.get("severity") == "high"][:10]
-        for evt in high:
+        for evt in [e for e in ml_events if e.get("severity") == "high"][:10]:
             _append_event(
                 data,
                 f"Attack detected [{evt.get('protocol', '?')}]",
-                f"src={evt.get('source_ip', '?')}  dst={evt.get('dest_ip', '?')}  "
                 f"confidence={evt.get('confidence', 0):.0%}",
             )
     elif threat_level == "suspicious":
@@ -215,7 +219,10 @@ def record_ml_scan_result(
             f"All {summary.get('total_rows', '?')} rows classified as normal",
         )
 
-    save_security_data(data)
+    save_network_data(data)
+
+
+# ── Malware scan persistence ──────────────────────────────────────────────────
 
 def record_malware_scan_result(
     scan_type: str,
@@ -226,26 +233,21 @@ def record_malware_scan_result(
     quarantined_paths: list,
     elapsed_seconds: float,
 ) -> None:
-    """
-    Persist the result of a malware scan into data.txt.
-
-    Parameters
-    ----------
-    scan_type         : "Signature Scan" or "Full Scan"
-    infected          : True if any threats were found
-    total_files       : total files scanned
-    clean_files       : files that passed all checks
-    infected_files    : files flagged and quarantined
-    quarantined_paths : list of new quarantine file paths
-    elapsed_seconds   : wall-clock duration of the scan
-    """
-    data = load_security_data()
+    """Persist the result of a malware scan into malware_data.txt."""
+    data = load_malware_data()
     now  = _now_iso()
 
     data["last_scan"]        = now
     data["last_scan_type"]   = scan_type
     data["malware_detected"] = infected
     data["quarantined_items"] = data.get("quarantined_items", 0) + infected_files
+    data["last_scan_summary"] = {
+        "total_files":      total_files,
+        "clean_files":      clean_files,
+        "infected_files":   infected_files,
+        "elapsed_seconds":  elapsed_seconds,
+        "attack_percentage": round(infected_files / total_files * 100, 2) if total_files else 0,
+    }
 
     if infected:
         _append_event(
@@ -262,4 +264,19 @@ def record_malware_scan_result(
             f"All {total_files} file(s) clean",
         )
 
-    save_security_data(data)
+    save_malware_data(data)
+
+
+# ── Legacy no-op helpers (called by old code paths) ──────────────────────────
+
+def record_scan(scan_type: str, source: str) -> None:
+    data = load_network_data()
+    data["last_scan"] = _now_iso()
+    data["last_scan_type"] = scan_type
+    _append_event(data, f"{scan_type} completed", f"Triggered from {source}")
+    save_network_data(data)
+
+def record_model_run(model_name: str, source: str) -> None:
+    data = load_network_data()
+    _append_event(data, f"{model_name} executed", f"Triggered from {source}")
+    save_network_data(data)
