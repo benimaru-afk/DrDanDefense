@@ -24,7 +24,7 @@ Open the **`dist`** folder — this is where the application files live:
 
 ### 3 — Desktop shortcut (optional)
 
-Inside the `dist` folder, double-click **`install.bat`** (highlighted below):
+Inside the `dist` folder, double-click **`install.bat`** or **`install.sh`** for linux, and **`install.command`** for mac(highlighted below):
 
 ![File explorer with install.bat selected](demo-pictures/install%20bat%20file.png)
 
