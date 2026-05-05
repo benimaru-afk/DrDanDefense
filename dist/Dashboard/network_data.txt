@@ -1,11 +1,87 @@
 {
-  "last_scan": null,
-  "last_scan_type": null,
-  "network_attacks_detected": false,
-  "network_threat_level": "none",
+  "last_scan": "2026-05-04T14:16:10",
+  "last_scan_type": "Quick Scan",
+  "network_attacks_detected": true,
+  "network_threat_level": "attack",
   "real_time_monitoring": true,
   "firewall_integration": true,
   "threat_signatures_updated_at": "2026-05-03T20:44:19",
-  "last_scan_summary": {},
-  "events": []
+  "last_scan_summary": {
+    "total_rows": 5660,
+    "attacks_detected": 1567,
+    "normal_rows": 4093,
+    "attack_percentage": 27.69,
+    "model_path": "C:\\Users\\benma\\OneDrive\\Desktop\\Senior Year\\Spring\\CSE363 Security\\DrDanDefense\\dist\\Dashboard\\models\\rf_best_20260504_140614_acc0.9968.pkl",
+    "model_val_accuracy": 0.9968247668188133,
+    "gpu_used": false,
+    "scan_file": "C:\\Users\\benma\\AppData\\Local\\Temp\\tmpui5pytza.csv",
+    "scan_duration_seconds": 0.418
+  },
+  "events": [
+    {
+      "title": "Quick Scan \u2014 1567 threat(s) detected",
+      "detail": "27.7% of 5660 rows flagged as malicious",
+      "timestamp": "2026-05-04T14:16:10"
+    },
+    {
+      "title": "Quick Scan \u2014 5834 threat(s) detected",
+      "detail": "23.1% of 25264 rows flagged as malicious",
+      "timestamp": "2026-05-04T14:07:22"
+    },
+    {
+      "title": "Attack detected [icmp]",
+      "detail": "confidence=91%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Attack detected [tcp]",
+      "detail": "confidence=100%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Attack detected [tcp]",
+      "detail": "confidence=100%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Attack detected [tcp]",
+      "detail": "confidence=90%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Attack detected [tcp]",
+      "detail": "confidence=100%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Attack detected [tcp]",
+      "detail": "confidence=100%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Attack detected [tcp]",
+      "detail": "confidence=100%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Attack detected [icmp]",
+      "detail": "confidence=98%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Attack detected [tcp]",
+      "detail": "confidence=100%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Attack detected [tcp]",
+      "detail": "confidence=100%",
+      "timestamp": "2026-05-04T14:06:26"
+    },
+    {
+      "title": "Quick Scan \u2014 8285 threat(s) detected",
+      "detail": "36.8% of 22544 rows flagged as malicious",
+      "timestamp": "2026-05-04T14:06:26"
+    }
+  ]
 }

@@ -1,0 +1,3 @@
+# Test hashs that will cause the scanner to trip from malware_hash.exe
+275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f
+b56078cd63c233e55fe47f653327848cb6d68b55f3eafdce3f366ca26be80cb4
